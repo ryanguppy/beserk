@@ -211,6 +211,144 @@
             loadEntries(); // Reload the entries
         }
     </script>
+
+<script>
+    // Replace this with your GitHub username, repository name, and the folder where you store entries
+    const GITHUB_USER = 'your-username';
+    const REPO_NAME = 'Journal-Entry';
+    const FOLDER_PATH = 'entries'; // Folder where the journal entries are stored
+    const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/contents/${FOLDER_PATH}/`;
+
+    // Your GitHub Personal Access Token
+    const TOKEN = 'your-personal-access-token'; // Replace with your token
+
+    // Function to authenticate with GitHub API
+    function authenticate() {
+        return {
+            headers: {
+                Authorization: `token ${TOKEN}`,
+            },
+        };
+    }
+
+    // Function to get all journal entries (list files in the entries folder)
+    async function getJournalEntries() {
+        try {
+            const response = await fetch(GITHUB_API_URL, authenticate());
+            const data = await response.json();
+            return data.filter(file => file.type === 'file'); // Only get files (entries)
+        } catch (error) {
+            console.error('Error fetching entries:', error);
+        }
+    }
+
+    // Function to create a new journal entry (post a file to GitHub)
+    async function createJournalEntry(entryName, entryContent) {
+        const filePath = `${FOLDER_PATH}/${entryName}.json`;
+
+        const body = JSON.stringify({
+            message: `Create new journal entry: ${entryName}`,
+            content: btoa(entryContent), // Encode content in Base64
+        });
+
+        try {
+            const response = await fetch(GITHUB_API_URL + entryName + '.json', {
+                method: 'PUT',
+                ...authenticate(),
+                body,
+            });
+
+            if (response.ok) {
+                alert('Entry saved successfully!');
+            } else {
+                alert('Failed to save entry.');
+            }
+        } catch (error) {
+            console.error('Error creating entry:', error);
+        }
+    }
+
+    // Function to delete a journal entry (delete file from GitHub)
+    async function deleteJournalEntry(entryName) {
+        const filePath = `${FOLDER_PATH}/${entryName}.json`;
+
+        const body = JSON.stringify({
+            message: `Delete journal entry: ${entryName}`,
+            sha: await getFileSha(entryName), // Get SHA of file to delete
+        });
+
+        try {
+            const response = await fetch(GITHUB_API_URL + entryName + '.json', {
+                method: 'DELETE',
+                ...authenticate(),
+                body,
+            });
+
+            if (response.ok) {
+                alert('Entry deleted successfully!');
+            } else {
+                alert('Failed to delete entry.');
+            }
+        } catch (error) {
+            console.error('Error deleting entry:', error);
+        }
+    }
+
+    // Function to get the SHA of an entry (needed for delete operation)
+    async function getFileSha(entryName) {
+        const response = await fetch(GITHUB_API_URL + entryName + '.json', authenticate());
+        const data = await response.json();
+        return data.sha; // Return SHA for the file
+    }
+
+    // Function to edit a journal entry
+    async function editJournalEntry(entryName, newContent) {
+        const filePath = `${FOLDER_PATH}/${entryName}.json`;
+
+        const body = JSON.stringify({
+            message: `Edit journal entry: ${entryName}`,
+            content: btoa(newContent), // Encode new content in Base64
+        });
+
+        try {
+            const response = await fetch(GITHUB_API_URL + entryName + '.json', {
+                method: 'PUT',
+                ...authenticate(),
+                body,
+            });
+
+            if (response.ok) {
+                alert('Entry edited successfully!');
+            } else {
+                alert('Failed to edit entry.');
+            }
+        } catch (error) {
+            console.error('Error editing entry:', error);
+        }
+    }
+
+    // Function to load entries and display them
+    async function loadEntries() {
+        const entries = await getJournalEntries();
+        const entryList = document.getElementById("entry-list");
+
+        entries.forEach(entry => {
+            const listItem = document.createElement('li');
+            listItem.textContent = entry.name;
+            listItem.onclick = () => viewEntry(entry.name);
+            entryList.appendChild(listItem);
+        });
+    }
+
+    // Function to view an entry
+    async function viewEntry(entryName) {
+        const response = await fetch(GITHUB_API_URL + entryName, authenticate());
+        const data = await response.json();
+        const content = atob(data.content); // Decode content from Base64
+        document.getElementById("entry-content").textContent = content;
+    }
+</script>
+
 </body>
 </html></div>
   </div>
