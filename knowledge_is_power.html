@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html> 
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="generator" content="RocketCake">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge is Power</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: #1e1e1e;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar h2 {
+            font-size: 20px;
+            color: #f0f0f0;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .directory-item {
+            margin: 5px 0;
+            cursor: pointer;
+        }
+
+        .directory-item .icon {
+            margin-right: 8px;
+        }
+
+        .directory-item.collapsed > ul {
+            display: none;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+
+        /* Main Content Area */
+        .content {
+            flex-grow: 1;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #f0f0f0;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Directory Actions */
+        .directory {
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .directory input {
+            background-color: #333;
+            color: #f0f0f0;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 5px;
+        }
+
+        .directory-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn {
+            padding: 8px;
+            background-color: #555;
+            color: #f0f0f0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #777;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar for Directories -->
+    <div class="sidebar">
+        <h2>Knowledge is Power</h2>
+        <button class="btn" onclick="addDirectory()">+ Add Directory</button>
+        <div id="sidebar-directory-container"></div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="content">
+        <h1>Directory Details</h1>
+        <div id="directory-details"></div>
+    </div>
+
+    <script>
+        // Load directories from localStorage on page load
+        window.onload = loadDirectories;
+
+        // Add a new main directory
+        function addDirectory(parentId = null) {
+            const directoryName = prompt("Enter a name for the directory:");
+            if (directoryName) {
+                const directories = JSON.parse(localStorage.getItem("directories")) || [];
+                const newDirectory = {
+                    id: Date.now(),
+                    name: directoryName,
+                    parentId: parentId,
+                    note: "",
+                };
+                directories.push(newDirectory);
+                localStorage.setItem("directories", JSON.stringify(directories));
+                loadDirectories(); // Reload directories in the sidebar
+            }
+        }
+
+        // Load all directories and render them in the sidebar
+        function loadDirectories() {
+            const directories = JSON.parse(localStorage.getItem("directories")) || [];
+            const sidebarContainer = document.getElementById("sidebar-directory-container");
+            sidebarContainer.innerHTML = ""; // Clear existing directories
+
+            directories
+                .filter(dir => dir.parentId === null) // Only load top-level directories
+                .forEach(dir => renderDirectoryItem(dir, sidebarContainer, directories));
+        }
+
+        // Render a directory item in the sidebar
+        function renderDirectoryItem(directory, container, directories) {
+            const directoryItem = document.createElement("div");
+            directoryItem.className = "directory-item collapsed";
+            directoryItem.innerHTML = `
+                <span class="icon">&#128193;</span>
+                <span onclick="displayDirectoryDetails(${directory.id})">${directory.name}</span>
+            `;
+            directoryItem.dataset.id = directory.id;
+
+            // Subdirectory container for nested items
+            const subDirContainer = document.createElement("ul");
+            directoryItem.appendChild(subDirContainer);
+
+            // Toggle expand/collapse for directories
+            directoryItem.onclick = (e) => {
+                if (e.target !== e.currentTarget) return;
+                subDirContainer.style.display = subDirContainer.style.display === "none" ? "block" : "none";
+            };
+
+            container.appendChild(directoryItem);
+
+            // Render subdirectories within the current directory
+            directories
+                .filter(subDir => subDir.parentId === directory.id)
+                .forEach(subDir => renderSubDirectoryItem(subDir, subDirContainer, directories));
+        }
+
+        // Render a subdirectory item under a directory
+        function renderSubDirectoryItem(directory, container, directories) {
+            const subDirectoryItem = document.createElement("li");
+            subDirectoryItem.className = "directory-item";
+            subDirectoryItem.innerHTML = `
+                <span class="icon">&#128196;</span>
+                <span onclick="displayDirectoryDetails(${directory.id})">${directory.name}</span>
+            `;
+            subDirectoryItem.dataset.id = directory.id;
+
+            container.appendChild(subDirectoryItem);
+
+            // Render nested subdirectories
+            const nestedSubDirContainer = document.createElement("ul");
+            subDirectoryItem.appendChild(nestedSubDirContainer);
+
+            directories
+                .filter(subDir => subDir.parentId === directory.id)
+                .forEach(subDir => renderSubDirectoryItem(subDir, nestedSubDirContainer, directories));
+        }
+
+        // Display directory details in the main content area
+        function displayDirectoryDetails(directoryId) {
+            const directories = JSON.parse(localStorage.getItem("directories")) || [];
+            const directory = directories.find(dir => dir.id === directoryId);
+
+            if (directory) {
+                const detailsContainer = document.getElementById("directory-details");
+                detailsContainer.innerHTML = `
+                    <div class="directory">
+                        <div class="name">${directory.name}</div>
+                        <div class="directory-actions">
+                            <button class="btn" onclick="renameDirectory(${directory.id})">Rename</button>
+                            <button class="btn" onclick="deleteDirectory(${directory.id})">Delete</button>
+                            <button class="btn" onclick="addDirectory(${directory.id})">Add Subdirectory</button>
+                        </div>
+                    </div>
+                    <textarea style="width: 100%; height: 200px;" oninput="saveNoteContent(${directory.id}, this.value)">
+                        ${directory.note}
+                    </textarea>
+                `;
+            }
+        }
+
+        // Save the note content to localStorage
+        function saveNoteContent(directoryId, noteContent) {
+            const directories = JSON.parse(localStorage.getItem("directories")) || [];
+            const directory = directories.find(dir => dir.id === directoryId);
+            if (directory) {
+                directory.note = noteContent;
+                localStorage.setItem("directories", JSON.stringify(directories));
+            }
+        }
+
+        // Rename a directory
+        function renameDirectory(directoryId) {
+            const directories = JSON.parse(localStorage.getItem("directories")) || [];
+            const directory = directories.find(dir => dir.id === directoryId);
+            if (directory) {
+                const newName = prompt("Enter a new name:", directory.name);
+                if (newName) {
+                    directory.name = newName;
+                    localStorage.setItem("directories", JSON.stringify(directories));
+                    loadDirectories();
+                }
+            }
+        }
+
+        // Delete a directory and its subdirectories
+        function deleteDirectory(directoryId) {
+            let directories = JSON.parse(localStorage.getItem("directories")) || [];
+            const toDelete = getAllDescendants(directoryId);
+            directories = directories.filter(dir => !toDelete.includes(dir.id));
+            localStorage.setItem("directories", JSON.stringify(directories));
+            loadDirectories();
+            document.getElementById("directory-details").innerHTML = ""; // Clear details view
+        }
+
+        // Get all descendants of a directory for deletion
+        function getAllDescendants(directoryId) {
+            const directories = JSON.parse(localStorage.getItem("directories")) || [];
+            const descendants = [directoryId];
+            let queue = [directoryId];
+
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                const children = directories.filter(dir => dir.parentId === currentId);
+                children.forEach(child => {
+                    descendants.push(child.id);
+                    queue.push(child.id);
+                });
+            }
+            return descendants;
+        }
+    </script>
+</body>
+</html>	<title></title>
+	<link rel="stylesheet" type="text/css" href="knowledge_is_power_html.css?h=9d56613a">
+</head>
+<body>
+</body>
+</html>
